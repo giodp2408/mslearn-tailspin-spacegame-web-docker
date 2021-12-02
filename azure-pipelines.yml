@@ -4,22 +4,16 @@ trigger:
 variables:
   buildConfiguration: 'Release'
 
-stage: Deploy
-  displayName: Deploy the container
-  dependsOn: Build
-  jobs:
-    - job: Deploy
-      displayName: Deploy job
-      pool:
-        vmImage: ubuntu-20.04
-      variables:
-        - group: Release
-      steps:
-        - task: AzureWebAppContainer@1
-          inputs:
-            appName: $(WebAppName)
-            azureSubscription: Resource Manager - Tailspin - Space Game
-            imageName: '$(RegistryName)/$(webRepository):$(build.buildId)'
+stages:
+- stage: 'Build'
+  displayName: 'Build the web application'
+  jobs: 
+  - job: 'Build'
+    displayName: 'Build job'
+    pool:
+      vmImage: 'ubuntu-20.04'
+      demands:
+      - npm
 
     variables:
       wwwrootDir: 'Tailspin.SpaceGame.Web/wwwroot'
@@ -71,26 +65,19 @@ stage: Deploy
     - publish: '$(Build.ArtifactStagingDirectory)'
       artifact: drop
 
-- stage: 'Deploy'
-  displayName: 'Deploy the web application'
+- stage: Deploy
+  displayName: Deploy the container
   dependsOn: Build
   jobs:
-  - deployment: Deploy
-    pool:
-      vmImage: 'ubuntu-20.04'
-    environment: spike
-    variables:
-    - group: Release
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - download: current
-            artifact: drop
-          - task: AzureWebApp@1
-            displayName: 'Azure App Service Deploy: website'
-            inputs:
-              azureSubscription: 'Resource Manager - Tailspin - Space Game'
-              appName: '$(WebAppName)'
-              appType: webAppLinux
-              package: '$(Pipeline.Workspace)/drop/$(buildConfiguration)/Tailspin.SpaceGame.Web.zip'
+    - job: Deploy
+      displayName: Deploy job
+      pool:
+        vmImage: ubuntu-20.04
+      variables:
+        - group: Release
+      steps:
+        - task: AzureWebAppContainer@1
+          inputs:
+            appName: $(WebAppName)
+            azureSubscription: Resource Manager - Tailspin - Space Game
+            imageName: '$(RegistryName)/$(webRepository):$(build.buildId)'
